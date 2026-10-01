@@ -1,0 +1,6 @@
+{
+  "name": "Quantiml",
+  "description": "AI-Driven Micro-Investing and Smart Round-Up Platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

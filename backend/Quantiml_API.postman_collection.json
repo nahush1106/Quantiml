@@ -1,0 +1,725 @@
+{
+  "info": {
+    "_postman_id": "b3e7a912-7f28-4e89-8d19-4a92c300df82",
+    "name": "Quantiml Fintech & Micro-Investing API",
+    "description": "Comprehensive Postman test collection for Quantiml: automated spare-change micro-investing, user authentication, profile settings, and transaction ledger backed by MongoDB.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "transactionId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. System & Health",
+      "description": "System diagnostic and API health check endpoints",
+      "item": [
+        {
+          "name": "GET Root Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Returns operational status and MongoDB connection state."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"App status is ONLINE\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql(\"ONLINE\");",
+                  "    pm.expect(json.database).to.be.an(\"object\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Detailed health diagnostics including database connectivity, uptime, and memory usage."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 or 503\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
+                  "});",
+                  "",
+                  "pm.test(\"Contains database and uptime details\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.database).to.be.an(\"object\");",
+                  "    pm.expect(json.uptime).to.be.a(\"string\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET API Catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api",
+              "host": ["{{baseUrl}}"],
+              "path": ["api"]
+            },
+            "description": "Lists all available endpoints and microservices in the Quantiml API."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Endpoints catalog is provided\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.endpoints).to.be.an(\"object\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Authentication & Registration",
+      "description": "User registration and login generating JWT tokens",
+      "item": [
+        {
+          "name": "POST User Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Arjun Sharma\",\n  \"email\": \"arjun.postman@example.com\",\n  \"phone\": \"9876500001\",\n  \"password\": \"Password@123\",\n  \"roundUpTarget\": 10,\n  \"roundUpMultiplier\": 1.0,\n  \"autoInvestThreshold\": 500.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "register"]
+            },
+            "description": "Registers a new user account with initial round-up settings and returns a JWT token."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Registration status code is 201 (or 400 if user exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 400]);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set(\"authToken\", jsonData.data.token);",
+                  "    pm.collectionVariables.set(\"userId\", jsonData.data.user.id || jsonData.data.user._id);",
+                  "    console.log(\"[Postman] Auth token saved:\", jsonData.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST User Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"arjun.postman@example.com\",\n  \"password\": \"Password@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "login"]
+            },
+            "description": "Authenticates user and refreshes collection authToken variable."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Login succeeds with valid JWT token\", function () {",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.token).to.be.a(\"string\");",
+                  "});",
+                  "",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set(\"authToken\", jsonData.data.token);",
+                  "    console.log(\"[Postman] Auth token updated via login\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Auth Me Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Returns current authenticated user details via the /auth/me route."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"User profile has email\", function () {",
+                  "    pm.expect(jsonData.data.email).to.be.a(\"string\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. User Profile & Settings",
+      "description": "Protected endpoints for fetching user details and updating micro-investing configurations",
+      "item": [
+        {
+          "name": "GET User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "profile"]
+            },
+            "description": "Fetches current user profile including settings and phone/email."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Profile data contains micro-investing settings\", function () {",
+                  "    pm.expect(jsonData.data.settings).to.be.an(\"object\");",
+                  "    pm.expect(jsonData.data.settings.roundUpTarget).to.be.a(\"number\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT Update Micro-Investing Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roundUpTarget\": 20,\n  \"roundUpMultiplier\": 2.0,\n  \"autoInvestThreshold\": 1000.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "settings"]
+            },
+            "description": "Updates round-up target (₹10, ₹20, ₹50, ₹100), accelerator multiplier (1x-10x), and auto-deployment threshold."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Updated settings are reflected\", function () {",
+                  "    pm.expect(jsonData.data.settings.roundUpTarget).to.eql(20);",
+                  "    pm.expect(jsonData.data.settings.roundUpMultiplier).to.eql(2.0);",
+                  "    pm.expect(jsonData.data.settings.autoInvestThreshold).to.eql(1000.0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Transactions & Round-Up Engine",
+      "description": "Expense logging, automatic spare-change round-up calculation, batch processing, and fund deployment",
+      "item": [
+        {
+          "name": "POST Log Transaction (Swiggy ₹247 -> ₹3 Spare Change)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 247.0,\n  \"merchant\": \"Swiggy Food Delivery\",\n  \"category\": \"DISCRETIONARY\",\n  \"source\": \"MANUAL\",\n  \"roundToMultiple\": 10,\n  \"customMultiplier\": 1.0,\n  \"notes\": \"Lunch order - testing round up to nearest ₹10\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"]
+            },
+            "description": "Logs an expense. Automatically calculates nearest ₹10 round-up (₹250) and ₹3 spare change."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Spare change correctly computed as ₹3.00\", function () {",
+                  "    pm.expect(jsonData.data.amount).to.eql(247.0);",
+                  "    pm.expect(jsonData.data.roundedAmount).to.eql(250.0);",
+                  "    pm.expect(jsonData.data.spareChange).to.eql(3.0);",
+                  "    pm.expect(jsonData.data.status).to.eql(\"ROUNDED_UP\");",
+                  "});",
+                  "if (jsonData.data && (jsonData.data._id || jsonData.data.id)) {",
+                  "    pm.collectionVariables.set(\"transactionId\", jsonData.data._id || jsonData.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Log Transaction with Multiplier (Starbucks ₹85 @ 2x)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 85.0,\n  \"merchant\": \"Starbucks Coffee\",\n  \"category\": \"DISCRETIONARY\",\n  \"source\": \"MANUAL\",\n  \"roundToMultiple\": 20,\n  \"customMultiplier\": 2.0,\n  \"notes\": \"Coffee with 2x savings booster\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"]
+            },
+            "description": "Logs an expense with roundToMultiple=20 and customMultiplier=2.0. Base round-up is ₹15, multiplied by 2x = ₹30."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Spare change computed with 2x multiplier\", function () {",
+                  "    pm.expect(jsonData.data.spareChange).to.eql(30.0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Bank SMS Auto-Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 182.50,\n  \"merchant\": \"Uber India\",\n  \"category\": \"ESSENTIAL\",\n  \"source\": \"SMS_AUTO\",\n  \"rawSmsBody\": \"INR 182.50 debited from A/c XX4092 on 26-Sep-26 towards UBER INDIA. UPI Ref 426891024.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions/sms",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions", "sms"]
+            },
+            "description": "Dedicated endpoint for mobile broadcast receiver to log auto-parsed bank SMS notifications."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Batch Sync Transactions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactions\": [\n    {\n      \"amount\": 154.0,\n      \"merchant\": \"Metro Card Recharge\",\n      \"category\": \"ESSENTIAL\"\n    },\n    {\n      \"amount\": 489.0,\n      \"merchant\": \"DMart Supermarket\",\n      \"category\": \"ESSENTIAL\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions", "batch"]
+            },
+            "description": "Batch logs offline transactions or multiple SMS messages in one network round-trip."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Batch count is 2\", function () {",
+                  "    pm.expect(jsonData.count).to.eql(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET All Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"]
+            },
+            "description": "Retrieves transactions list for the authenticated user."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Data is array\", function () {",
+                  "    pm.expect(jsonData.data).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET All Transactions (Direct Array for Android)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions?format=array",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "array"
+                }
+              ]
+            },
+            "description": "Used by the Android Retrofit client: returns transactions as a top-level JSON array directly."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response is a direct array\", function () {",
+                  "    pm.expect(Array.isArray(jsonData)).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Transaction by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions/{{transactionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions", "{{transactionId}}"]
+            },
+            "description": "Fetches detailed information for a single transaction by ID."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Wallet Metrics & Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions", "stats"]
+            },
+            "description": "Calculates live spare change wallet balance, total amount deployed/invested, and auto-invest threshold progress."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Stats return accumulated spare change and total invested\", function () {",
+                  "    pm.expect(jsonData.data.accumulatedSpareChange).to.be.a(\"number\");",
+                  "    pm.expect(jsonData.data.totalInvested).to.be.a(\"number\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Deploy Accumulated Round-Ups",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions/deploy",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions", "deploy"]
+            },
+            "description": "Transitions accumulated ROUNDED_UP transactions to INVESTED and sweeps funds into the user's investment portfolio."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Deployment moves funds to portfolio\", function () {",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.remainingBalance).to.eql(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
